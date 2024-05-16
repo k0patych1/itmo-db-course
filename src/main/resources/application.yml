@@ -1,0 +1,16 @@
+spring:
+  jpa:
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: true
+  application:
+    name: itmo-db-lab-2
+  liquibase:
+    change-log: classpath:/db/changelog/master.xml
+
+  datasource:
+    url: jdbc:postgresql://postgresql:5432/postgres?stringtype=unspecified
+    username: postgres
+    password: postgres
+    driverClassName: org.postgresql.Driver
