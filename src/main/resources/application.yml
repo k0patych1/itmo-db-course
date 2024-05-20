@@ -1,14 +1,16 @@
+app:
+  generation-data-size: ${GENERATION_DATA_SIZE}
+
 spring:
   jpa:
+    hibernate:
+      ddl-auto: none
     show-sql: false
     properties:
       hibernate:
         format_sql: true
   application:
     name: itmo-db-lab-2
-  liquibase:
-    change-log: classpath:/db/changelog/master.xml
-
   datasource:
     url: jdbc:postgresql://postgresql:5432/postgres?stringtype=unspecified
     username: postgres

@@ -2,29 +2,35 @@ version: '3.8'
 
 services:
   app:
-    build: .
+    env_file:
+      - .env
+    build:
+      context: .
+      args:
+        GENERATION_DATA_SIZE: ${GENERATION_DATA_SIZE}
     ports:
       - "8080:8080"
     links:
       - postgresql
 
   postgresql:
-    image: postgres:16
+    build:
+      context: init_db
     ports:
       - "5432:5432"
     environment:
       POSTGRES_DB: postgres
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres
-    volumes:
-      - postgresql:/var/lib/postgresql/data
 
   liquibase-migrations:
     image: liquibase/liquibase:4.25
     depends_on:
       - postgresql
+    env_file:
+      - .env
     command:
-      - --changelog-file=master.xml
+      - --changelog-file=${MIGRATIONS_VERSION}/master.xml
       - --driver=org.postgresql.Driver
       - --url=jdbc:postgresql://postgresql:5432/postgres
       - --username=postgres
@@ -32,6 +38,3 @@ services:
       - update
     volumes:
       - ./migrations:/liquibase/changelog
-
-volumes:
-  postgresql: {}

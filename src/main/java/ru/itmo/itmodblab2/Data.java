@@ -1,5 +1,7 @@
 package ru.itmo.itmodblab2;
 
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 import net.datafaker.Faker;
 import ru.itmo.itmodblab2.entity.*;
 import ru.itmo.itmodblab2.model.Measure;
@@ -14,25 +16,36 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public record Data(
-        List<Supplier> supplierList,
-        List<TypeListOfSupplier> typeListOfSuppliers,
-        List<Product> productList,
-        List<PurchaseDetail> purchaseDetails,
-        List<Purchase> purchaseList,
-        List<Dish> dishes,
-        List<DishIngredients> dishIngredients,
-        List<Client> clients,
-        List<Order> orders,
-        List<OrderDishes> orderDishes,
-        List<Table> tables,
-        List<Booking> bookings
-) {
-    private static final int GENERATION_DATA_SIZE = 10;
+@RequiredArgsConstructor
+@Getter
+public class Data {
+    private final List<Supplier> supplierList;
 
-    public static SupplierBuilder Builder = new DataBuilder();
+    private final List<TypeListOfSupplier> typeListOfSuppliers;
 
-    private static class DataBuilder implements SupplierBuilder, TypeListOfSupplierBuilder,
+    private final List<Product> productList;
+
+    private final List<PurchaseDetail> purchaseDetails;
+
+    private final List<Purchase> purchaseList;
+
+    private final List<Dish> dishes;
+
+    private final List<DishIngredients> dishIngredients;
+
+    private final List<Client> clients;
+
+    private final List<Order> orders;
+
+    private final List<OrderDishes> orderDishes;
+
+    private final List<Table> tables;
+
+    private final List<Booking> bookings;
+
+    public static GenerationSizeBuilder Builder = new DataBuilder();
+
+    private static class DataBuilder implements GenerationSizeBuilder, SupplierBuilder, TypeListOfSupplierBuilder,
             ProductBuilder, PurchaseDetailBuilder, PurchaseBuilder,
             DishBuilder, DishIngredientsBuilder, ClientBuilder,
             OrderBuilder, OrderDishesBuilder, TableBuilder, BookingBuilder {
@@ -62,6 +75,8 @@ public record Data(
 
         private final Faker faker;
 
+        private Long generationDataSize;
+
         private DataBuilder() {
             supplierList = new ArrayList<>();
             typeListOfSuppliers = new ArrayList<>();
@@ -80,8 +95,14 @@ public record Data(
         }
 
         @Override
+        public SupplierBuilder setGenerationSize(Long size) {
+            this.generationDataSize = size;
+            return this;
+        }
+
+        @Override
         public TypeListOfSupplierBuilder generateFakeSuppliers() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 String supplierName = faker.company().name();
                 supplierList.add(new Supplier(i, supplierName));
             }
@@ -91,17 +112,17 @@ public record Data(
 
         @Override
         public ProductBuilder generateFakeTypes() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 var types = ProductType.values();
                 ProductType productType = types[faker.number().numberBetween(0, types.length)];
                 typeListOfSuppliers.add(new TypeListOfSupplier(i, i, productType));
             }
 
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                Long supplierId = faker.number().numberBetween(0L, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                Long supplierId = faker.number().numberBetween(0L, generationDataSize);
                 var types = ProductType.values();
                 ProductType productType = types[faker.number().numberBetween(0, types.length)];
-                typeListOfSuppliers.add(new TypeListOfSupplier(i + GENERATION_DATA_SIZE, supplierId, productType));
+                typeListOfSuppliers.add(new TypeListOfSupplier(i + generationDataSize, supplierId, productType));
             }
 
             return this;
@@ -109,9 +130,9 @@ public record Data(
 
         @Override
         public PurchaseDetailBuilder generateFakeProducts() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 ProductType productType = typeListOfSuppliers.get(
-                        faker.number().numberBetween(0, typeListOfSuppliers.size())).
+                                faker.number().numberBetween(0, typeListOfSuppliers.size())).
                         getProductType();
                 String productName = ProductGenerator.generateProductName(productType);
                 int minStock = faker.number().numberBetween(0, 100);
@@ -126,8 +147,8 @@ public record Data(
 
         @Override
         public PurchaseBuilder generateFakePurchaseDetails() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long productId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long productId = faker.number().numberBetween(0, generationDataSize);
                 int volume = faker.number().numberBetween(1, 100);
                 BigDecimal price = BigDecimal.valueOf(faker.number().randomDouble(2, 100, 100000));
                 Measure measure = PurchaseGenerator.generateMeasure(productList.get((int) productId).getType());
@@ -139,9 +160,9 @@ public record Data(
 
         @Override
         public DishBuilder generateFakePurchases() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long supplierId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
-                long purchaseDetailId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long supplierId = faker.number().numberBetween(0, generationDataSize);
+                long purchaseDetailId = faker.number().numberBetween(0, generationDataSize);
                 LocalDateTime time = LocalDateTime.now()
                         .minusDays(faker.number().numberBetween(0, 365))
                         .minusHours(faker.number().numberBetween(0, 24))
@@ -155,7 +176,7 @@ public record Data(
 
         @Override
         public DishIngredientsBuilder generateFakeDishes() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 String name = faker.food().dish();
                 BigDecimal price = BigDecimal.valueOf(faker.number().randomDouble(2, 100, 10000));
                 int weight = faker.number().numberBetween(40, 500);
@@ -168,8 +189,8 @@ public record Data(
 
         @Override
         public BookingBuilder generateFakeBookings() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long tableId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long tableId = faker.number().numberBetween(0, generationDataSize);
                 LocalDateTime startTime = LocalDateTime.now()
                         .plusDays(faker.number().numberBetween(0, 7))
                         .plusHours(faker.number().numberBetween(0, 24))
@@ -187,7 +208,7 @@ public record Data(
 
         @Override
         public OrderBuilder generateFakeClients() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 String name = faker.name().firstName();
                 String surname = faker.name().lastName();
                 String phone = faker.phoneNumber().cellPhone();
@@ -201,15 +222,15 @@ public record Data(
 
         @Override
         public ClientBuilder generateFakeDishIngredients() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long productId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long productId = faker.number().numberBetween(0, generationDataSize);
                 dishIngredients.add(new DishIngredients(i, productId, i));
             }
 
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long dishId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
-                long productId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
-                dishIngredients.add(new DishIngredients(i + GENERATION_DATA_SIZE, productId, dishId));
+            for (long i = 0; i < generationDataSize; ++i) {
+                long dishId = faker.number().numberBetween(0, generationDataSize);
+                long productId = faker.number().numberBetween(0, generationDataSize);
+                dishIngredients.add(new DishIngredients(i + generationDataSize, productId, dishId));
             }
 
             return this;
@@ -217,14 +238,14 @@ public record Data(
 
         @Override
         public TableBuilder generateFakeOrderDishes() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long dishId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long dishId = faker.number().numberBetween(0, generationDataSize);
                 orderDishes.add(new OrderDishes(i, i, dishId));
             }
 
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long clientId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
-                long dishId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long clientId = faker.number().numberBetween(0, generationDataSize);
+                long dishId = faker.number().numberBetween(0, generationDataSize);
                 orderDishes.add(new OrderDishes(i, clientId, dishId));
             }
 
@@ -233,7 +254,7 @@ public record Data(
 
         @Override
         public BookingBuilder generateFakeTables() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
+            for (long i = 0; i < generationDataSize; ++i) {
                 tables.add(new Table(i, faker.bool().bool(), faker.bool().bool(), faker.number().numberBetween(1, 10)));
             }
 
@@ -242,8 +263,8 @@ public record Data(
 
         @Override
         public OrderDishesBuilder generateFakeOrders() {
-            for (long i = 0; i < GENERATION_DATA_SIZE; ++i) {
-                long clientId = faker.number().numberBetween(0, GENERATION_DATA_SIZE);
+            for (long i = 0; i < generationDataSize; ++i) {
+                long clientId = faker.number().numberBetween(0, generationDataSize);
                 LocalDateTime time = LocalDateTime.now()
                         .minusDays(faker.number().numberBetween(0, 365))
                         .minusHours(faker.number().numberBetween(0, 24))

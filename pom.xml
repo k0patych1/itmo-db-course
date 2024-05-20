@@ -27,11 +27,6 @@
             <scope>test</scope>
         </dependency>
         <dependency>
-            <groupId>org.liquibase</groupId>
-            <artifactId>liquibase-core</artifactId>
-            <version>4.20.0</version>
-        </dependency>
-        <dependency>
             <groupId>net.datafaker</groupId>
             <artifactId>datafaker</artifactId>
             <version>2.2.2</version>

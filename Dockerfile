@@ -1,4 +1,8 @@
 FROM eclipse-temurin:21
 ARG JAR_FILE=target/*.jar
 COPY ${JAR_FILE} app.jar
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+ARG GENERATION_DATA_SIZE
+ARG MIGRATIONS_VERSION
+ENV GENERATION_DATA_SIZE=${GENERATION_DATA_SIZE}
+ENV MIGRATIONS_VERSION=${MIGRATIONS_VERSION}
+ENTRYPOINT ["java", "-Dapp.generation-data-size=${GENERATION_DATA_SIZE}", "-jar", "/app.jar"]
