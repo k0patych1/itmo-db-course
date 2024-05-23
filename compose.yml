@@ -30,11 +30,12 @@ services:
     env_file:
       - .env
     command:
-      - --changelog-file=${MIGRATIONS_VERSION}/master.xml
+      - --changelog-file=master.xml
       - --driver=org.postgresql.Driver
       - --url=jdbc:postgresql://postgresql:5432/postgres
       - --username=postgres
       - --password=postgres
-      - update
+      - update-to-tag
+      - ${MIGRATIONS_VERSION}
     volumes:
       - ./migrations:/liquibase/changelog
