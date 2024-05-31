@@ -1,0 +1,13 @@
+app:
+  queries: ${QUERIES}
+  repeat-count: ${REPEAT_COUNT}
+
+spring:
+  jpa:
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQLDialect
+  datasource:
+    url: jdbc:postgresql://haproxy:5000/postgres?stringtype=unspecified
+    username: postgres
+    password: postgres
+    driverClassName: org.postgresql.Driver

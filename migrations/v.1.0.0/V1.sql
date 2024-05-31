@@ -163,7 +163,7 @@ create table if not exists order_dishes
 
 create table if not exists booking
 (
-    id bigint generated always as identity,
+    id bigint,
     start_time timestamp without time zone not null,
     end_time timestamp without time zone not null,
     client_id bigint not null,

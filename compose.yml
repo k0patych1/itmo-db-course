@@ -1,41 +1,156 @@
 version: '3.8'
 
+networks:
+  demo:
+
 services:
-  app:
+  data_generator:
+    networks: [ demo ]
     env_file:
       - .env
+    depends_on:
+      - liquibase-migrations
     build:
-      context: .
-      args:
-        GENERATION_DATA_SIZE: ${GENERATION_DATA_SIZE}
+      context: dataGenerator
     ports:
       - "8080:8080"
-    links:
-      - postgresql
 
-  postgresql:
+  analyzer:
+    networks: [ demo ]
+    env_file:
+      - .env
+    depends_on:
+      data_generator:
+        condition: service_completed_successfully
     build:
-      context: init_db
+      context: analyzer
     ports:
-      - "5432:5432"
+      - "8081:8081"
+    volumes:
+      - ./results:/results
+  etcd1: &etcd
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
     environment:
-      POSTGRES_DB: postgres
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+      ETCD_LISTEN_PEER_URLS: http://0.0.0.0:2380
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_INITIAL_CLUSTER: etcd1=http://etcd1:2380,etcd2=http://etcd2:2380,etcd3=http://etcd3:2380
+      ETCD_INITIAL_CLUSTER_STATE: new
+      ETCD_INITIAL_CLUSTER_TOKEN: tutorial
+      ETCD_UNSUPPORTED_ARCH: arm64
+    container_name: demo-etcd1
+    hostname: etcd1
+    command: etcd --name etcd1 --initial-advertise-peer-urls http://etcd1:2380
+
+  etcd2:
+    <<: *etcd
+    container_name: demo-etcd2
+    hostname: etcd2
+    command: etcd --name etcd2 --initial-advertise-peer-urls http://etcd2:2380
+
+  etcd3:
+    <<: *etcd
+    container_name: demo-etcd3
+    hostname: etcd3
+    command: etcd --name etcd3 --initial-advertise-peer-urls http://etcd3:2380
+
+  haproxy:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: replications/docker/patroni.env
+    hostname: haproxy
+    container_name: demo-haproxy
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    command: haproxy
+    environment: &haproxy_env
+      ETCDCTL_ENDPOINTS: http://etcd1:2379,http://etcd2:2379,http://etcd3:2379
+      PATRONI_ETCD3_HOSTS: "'etcd1:2379','etcd2:2379','etcd3:2379'"
+      PATRONI_SCOPE: demo
+
+  patroni1:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: replications/docker/patroni.env
+    hostname: patroni1
+    container_name: demo-patroni1
+    volumes:
+      - ./backup.sql:/backup.sql
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni1
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  patroni2:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: replications/docker/patroni.env
+    hostname: patroni2
+    container_name: demo-patroni2
+    volumes:
+      - ./backup.sql:/backup.sql
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni2
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+
+  patroni3:
+    image: ${PATRONI_TEST_IMAGE:-patroni}
+    networks: [ demo ]
+    env_file: replications/docker/patroni.env
+    hostname: patroni3
+    container_name: demo-patroni3
+    volumes:
+      - ./backup.sql:/backup.sql
+    environment:
+      <<: *haproxy_env
+      PATRONI_NAME: patroni3
+    healthcheck:
+      test: [ "CMD-SHELL", "sh -c 'pg_isready -U postgres -d postgres'" ]
+      interval: 10s
+      timeout: 3s
+      retries: 3
 
   liquibase-migrations:
     image: liquibase/liquibase:4.25
     depends_on:
-      - postgresql
+      patroni1:
+        condition: service_healthy
+      patroni2:
+        condition: service_healthy
+      patroni3:
+        condition: service_healthy
+    networks: [ demo ]
     env_file:
       - .env
     command:
       - --changelog-file=master.xml
       - --driver=org.postgresql.Driver
-      - --url=jdbc:postgresql://postgresql:5432/postgres
+      - --url=jdbc:postgresql://haproxy:5000/postgres
       - --username=postgres
       - --password=postgres
       - update-to-tag
       - ${MIGRATIONS_VERSION}
     volumes:
       - ./migrations:/liquibase/changelog
+  backup:
+    image: postgres:16
+    networks: [ demo ]
+    volumes:
+      - ./.env:/.env
+      - ./backup:/backups
+      - ./backup/backup.sh:/docker-entrypoint-initdb.d/backup.sh
+    depends_on:
+      data_generator:
+        condition: service_completed_successfully
+    entrypoint: /bin/bash -c "sleep 3 && /docker-entrypoint-initdb.d/backup.sh"
+
